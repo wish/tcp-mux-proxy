@@ -3,7 +3,7 @@ RUN go get -u github.com/golang/dep/cmd/dep
 WORKDIR /go/src/github.com/wish/tcp-mux-proxy/
 COPY . /go/src/github.com/wish/tcp-mux-proxy/
 RUN dep ensure
-RUN  GOOS=linux go build -a
+RUN  GOOS=linux go build -a ./cmd/tcp-mux-proxy/
 
 
 FROM alpine:3.9

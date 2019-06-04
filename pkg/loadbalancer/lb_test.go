@@ -1,4 +1,4 @@
-package main
+package loadbalancer
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ import (
 
 func TestPowOfTwoLB(t *testing.T) {
 	n := uint16(30)
-	lb := PowerOfTwoLoadBalancer{n: n, connections: make([]uint32, n)}
+	lb := NewPowerOfTwoLoadBalancer(n)
 	record := make([]int, n)
 
 	for i := 0; i < 3000000; i++ {
@@ -23,7 +23,7 @@ func TestPowOfTwoLB(t *testing.T) {
 			wait := time.Duration(int((1 + (rand.Float32()*2 - 1)) * 1000))
 			time.Sleep(time.Millisecond * wait)
 			lb.DecConn(id)
-		}(id, &lb)
+		}(id, lb)
 	}
 
 	sort.Ints(record)
@@ -39,7 +39,7 @@ func TestPowOfTwoLB(t *testing.T) {
 func TestLBAtomicIncDec(t *testing.T) {
 	var wg sync.WaitGroup
 	n := uint16(30)
-	lb := PowerOfTwoLoadBalancer{n: n, connections: make([]uint32, n)}
+	lb := NewPowerOfTwoLoadBalancer(n)
 
 	wg.Add(100000)
 	for i := 0; i < 100000; i++ {
@@ -56,7 +56,7 @@ func TestLBAtomicIncDec(t *testing.T) {
 
 			lb.DecConn(id1)
 			lb.DecConn(id2)
-		}(&lb)
+		}(lb)
 	}
 
 	wg.Wait()
@@ -70,7 +70,7 @@ func TestLBAtomicIncDec(t *testing.T) {
 
 func TestBasicLBAtomicIncDec(t *testing.T) {
 	n := uint16(30)
-	lb := PowerOfTwoLoadBalancer{n: n, connections: make([]uint32, n)}
+	lb := NewPowerOfTwoLoadBalancer(n)
 
 	lb.IncConn(9)
 	lb.IncConn(9)
@@ -88,7 +88,7 @@ func TestBasicLBAtomicIncDec(t *testing.T) {
 //Inc and Dec both use atomic.AddUint32 so we just need to benchmark Inc
 func BenchmarkBasicAtomicInc(b *testing.B) {
 	n := uint16(30)
-	lb := PowerOfTwoLoadBalancer{n: n, connections: make([]uint32, n)}
+	lb := NewPowerOfTwoLoadBalancer(n)
 
 	b.ResetTimer()
 
@@ -100,7 +100,7 @@ func BenchmarkBasicAtomicInc(b *testing.B) {
 
 func BenchmarkContentionAtomicInc(b *testing.B) {
 	n := uint16(30)
-	lb := PowerOfTwoLoadBalancer{n: n, connections: make([]uint32, n)}
+	lb := NewPowerOfTwoLoadBalancer(n)
 
 	b.SetParallelism(10)
 	b.ResetTimer()

@@ -1,4 +1,4 @@
-package main
+package healthmonitor
 
 import (
 	"testing"
@@ -13,7 +13,7 @@ func TestBasicProxyServer(t *testing.T) {
 	}
 
 	proxy := NewProxyServer(&config)
-	go proxy.start()
+	go proxy.Start()
 	time.Sleep(time.Second * 10)
 	for i := 0; i < 5; i++ {
 		go proxy.stop()

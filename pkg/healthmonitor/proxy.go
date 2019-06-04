@@ -1,4 +1,4 @@
-package main
+package healthmonitor
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/wish/tcp-mux-proxy/pkg/loadbalancer"
 )
 
 // ProxyServer encapsulates the server and config for the proxy
@@ -29,7 +30,7 @@ type ProxyServer struct {
 func NewProxyServer(config *Config) *ProxyServer {
 	proxyServer := &ProxyServer{
 		ph: proxyHandler{
-			lb:       NewPowerOfTwoLoadBalancer(uint16(len(config.Backend))),
+			lb:       loadbalancer.NewPowerOfTwoLoadBalancer(uint16(len(config.Backend))),
 			maxConn:  uint32(config.Proxy.MaxConn),
 			backends: config.Backend,
 			metrics:  NewProxyHandlerMetrics(),
@@ -58,7 +59,8 @@ func (proxyServer *ProxyServer) resetTimer() float64 {
 	return time.Since(tmp).Seconds()
 }
 
-func (proxyServer *ProxyServer) isInShutdown() bool {
+// IsInShutdown returns true if the server is in shutdown, else returns false
+func (proxyServer *ProxyServer) IsInShutdown() bool {
 	return atomic.LoadUint32(&proxyServer.shutdownInProgress) == 1
 }
 
@@ -73,7 +75,8 @@ func (proxyServer *ProxyServer) stop() {
 	}
 }
 
-func (proxyServer *ProxyServer) start() error {
+// Start starts the proxy server
+func (proxyServer *ProxyServer) Start() error {
 	// at this point proxyHandler.curConn should be zero after shutdown
 	mux := http.NewServeMux()
 	mux.Handle("/status/", &statusHandler{})
@@ -111,15 +114,14 @@ type statusHandler struct{}
 func (sh *statusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// haproxy docs say health checks consist of estabilishing tcp connection
 	// if server is in shutdown, this will fail, otherwise it will succeed
-	// so we can probably send back empty response with 200
-	// this will only be needed if we are using httpchk
+	// this will only be needed if using httpchk
 	// http:// cbonte.github.io/haproxy-dconv/2.0/configuration.html
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 }
 
 type proxyHandler struct {
-	lb       LoadBalancer
+	lb       loadbalancer.LoadBalancer
 	backends []BackendPort
 	maxConn  uint32
 	curConn  uint32
@@ -145,8 +147,8 @@ func (ph *proxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	id := ph.lb.GetDownstream()
-	//check if the choice is healthy?
 	ph.lb.IncConn(id)
+
 	//proxy := httputil.NewSingleHostReverseProxy(ph.backends[id].URL)
 	serveTimeNS := time.Since(tStart).Nanoseconds()
 	ph.proxies[id].ServeHTTP(w, r)

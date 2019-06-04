@@ -1,4 +1,4 @@
-package main
+package loadbalancer
 
 // LoadBalancer interface defines the functions
 // the load balancer needs to implement

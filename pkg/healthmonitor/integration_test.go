@@ -1,4 +1,4 @@
-package main
+package healthmonitor
 
 import (
 	"context"
@@ -29,7 +29,7 @@ func TestSystemBasic(t *testing.T) {
 	// Initialize proxy and health monitor
 	proxy := NewProxyServer(&config)
 	healthMonitor := NewHealthMonitor(&config, proxy)
-	go metricsServer(config.Proxy.MetricsPort)
+	go MetricsServer(config.Proxy.MetricsPort)
 
 	for _, backend := range config.Backend {
 		go runMockDownstream(":" + strconv.Itoa(backend.Port))
@@ -41,7 +41,7 @@ func TestSystemBasic(t *testing.T) {
 
 	// we can launch the health checks before starting the proxy server
 	for id := range config.Backend {
-		go healthMonitor.confirmHealth(uint16(id))
+		go healthMonitor.ConfirmHealth(uint16(id))
 	}
 
 	go runMockUpstream("http://localhost" + config.Proxy.Bind)
@@ -52,13 +52,13 @@ func TestSystemBasic(t *testing.T) {
 
 	// Main application loop
 	for {
-		err := proxy.start()
+		err := proxy.Start()
 		if err != nil {
 			log.Fatalf("Could not start proxy: %v\n", err)
 			panic(err)
 		}
 
-		for healthMonitor.isUnhealthy() || proxy.isInShutdown() {
+		for healthMonitor.IsUnhealthy() || proxy.IsInShutdown() {
 			time.Sleep(config.Proxy.RecoverySleepTime)
 		}
 	}

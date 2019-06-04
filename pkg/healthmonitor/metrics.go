@@ -1,4 +1,4 @@
-package main
+package healthmonitor
 
 import (
 	"io"
@@ -9,7 +9,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-func metricsServer(bind string) {
+// MetricsServer launches the prometheus metrics server
+func MetricsServer(bind string) {
 	http.Handle("/metrics", promhttp.Handler())
 	http.Handle("/status", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
