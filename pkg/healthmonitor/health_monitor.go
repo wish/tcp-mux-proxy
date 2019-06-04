@@ -1,4 +1,4 @@
-package main
+package healthmonitor
 
 import (
 	"io"
@@ -26,7 +26,7 @@ type HealthMonitor struct {
 func NewHealthMonitor(config *Config, proxy *ProxyServer) *HealthMonitor {
 	return &HealthMonitor{
 		numUnhealthy: 0,
-		threshold:    uint32(len(config.Backend) - config.Proxy.MinAlive),
+		threshold:    uint32(len(config.Backend) - config.Proxy.MinAlive), //should add an assert that this is greater than or equal to zero
 		proxy:        proxy,
 		backends:     config.Backend,
 		client:       http.Client{Timeout: time.Second},
@@ -35,11 +35,14 @@ func NewHealthMonitor(config *Config, proxy *ProxyServer) *HealthMonitor {
 	}
 }
 
-func (hm *HealthMonitor) isUnhealthy() bool {
+// IsUnhealthy returns true if the server has more unhealthy downstreams
+// than the threshold value
+func (hm *HealthMonitor) IsUnhealthy() bool {
 	return atomic.LoadUint32(&hm.numUnhealthy) >= hm.threshold
 }
 
-func (hm *HealthMonitor) confirmHealth(id uint16) {
+// ConfirmHealth starts the health check loop
+func (hm *HealthMonitor) ConfirmHealth(id uint16) {
 	for {
 		if !hm.checkHealth(id) {
 			hm.incUnhealthy(id)
@@ -53,7 +56,7 @@ func (hm *HealthMonitor) recoverHealth(id uint16) {
 	for {
 		if hm.checkHealth(id) {
 			hm.decUnhealthy(id)
-			hm.confirmHealth(id)
+			hm.ConfirmHealth(id)
 		}
 		time.Sleep(hm.backends[id].HealthCheckInterval)
 	}
@@ -65,7 +68,6 @@ func (hm *HealthMonitor) incUnhealthy(id uint16) {
 		hm.proxy.stop()
 		hm.metrics.status.With(hm.labels).Dec()
 	}
-	//are you sure this is actually touching the same thing
 	hm.proxy.ph.lb.MarkUnhealthy(id)
 	hm.metrics.numUnhealthyPorts.With(hm.labels).Inc()
 }
@@ -88,10 +90,7 @@ func (hm *HealthMonitor) checkHealth(id uint16) bool {
 	}
 
 	responseVal := (response.StatusCode - 400) / 100
-	// may want these split into distinct cases
-	if responseVal == 0 {
-		return false
-	} else if responseVal == 1 {
+	if responseVal >= 0 {
 		return false
 	}
 
