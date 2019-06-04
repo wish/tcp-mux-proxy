@@ -1,0 +1,33 @@
+proxy:
+  bind: :8081
+  metrics_server_port: :9000
+  max_conn: 1000
+  min_alive: 2
+  recovery_sleep_time: "100ms"
+  
+backend:
+  - name: "server_1"
+    host: "http://localhost"
+    port: 3000
+    health_check_endpoint: "/status"
+    health_check_interval: "500ms"
+  - name: "server_2"
+    host: "http://localhost"
+    port: 3001
+    health_check_endpoint: "/status"
+    health_check_interval: "500ms"
+  - name: "server_3"
+    host: "http://localhost"
+    port: 3002
+    health_check_endpoint: "/status"
+    health_check_interval: "500ms"
+  - name: "server_4"
+    host: "http://localhost"
+    port: 3003
+    health_check_endpoint: "/status"
+    health_check_interval: "500ms"
+  - name: "server_5"
+    host: "http://localhost"
+    port: 3004
+    health_check_endpoint: "/status"
+    health_check_interval: "500ms"
