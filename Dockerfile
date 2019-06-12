@@ -6,8 +6,7 @@ RUN dep ensure
 RUN  GOOS=linux go build -a ./cmd/tcp-mux-proxy/
 
 
-FROM alpine:3.9
-RUN apk --no-cache add ca-certificates
+FROM debian:stretch-slim
 WORKDIR /root/
 COPY --from=0 /go/src/github.com/wish/tcp-mux-proxy/tcp-mux-proxy .
 CMD /root/tcp-mux-proxy
