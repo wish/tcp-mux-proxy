@@ -81,8 +81,9 @@ func (proxyServer *ProxyServer) Start() error {
 	mux := http.NewServeMux()
 	mux.Handle("/status/", &statusHandler{})
 	mux.Handle("/", &proxyServer.ph)
+
 	proxyServer.server = &http.Server{
-		Addr:         ":8081",
+		Addr:         proxyServer.bind,
 		Handler:      mux,
 		WriteTimeout: 10 * time.Second,
 		ReadTimeout:  5 * time.Second,
