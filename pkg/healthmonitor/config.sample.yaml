@@ -4,6 +4,7 @@ proxy:
   max_conn: 1000
   min_alive: 2
   recovery_sleep_time: "100ms"
+  name: "server"
   
 backend:
   - name: "server_1"

@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"net/http/httputil"
-	"strconv"
 	"sync/atomic"
 	"time"
 
@@ -22,8 +21,9 @@ type ProxyServer struct {
 	shutdownInProgress  uint32
 	metrics             *ProxyServerMetrics
 	lastStateChangeTime time.Time
-	hostnameLabel       prometheus.Labels
+	nameLabel           prometheus.Labels
 	firstStart          bool
+	name                string
 }
 
 // NewProxyServer builds a proxy server and returns it
@@ -34,12 +34,12 @@ func NewProxyServer(config *Config) *ProxyServer {
 			maxConn:  uint32(config.Proxy.MaxConn),
 			backends: config.Backend,
 			metrics:  NewProxyHandlerMetrics(),
-			hostname: config.Backend[0].Host,
+			name:     config.Proxy.Name,
 		},
 		bind:                config.Proxy.Bind,
 		shutdownInProgress:  0,
 		metrics:             NewProxyServerMetrics(),
-		hostnameLabel:       prometheus.Labels{"hostname": config.Backend[0].Host},
+		nameLabel:           prometheus.Labels{"name": config.Proxy.Name},
 		firstStart:          true,
 		lastStateChangeTime: time.Now(),
 	}
@@ -95,13 +95,13 @@ func (proxyServer *ProxyServer) Start() error {
 		proxyServer.resetTimer()
 		proxyServer.firstStart = false
 	} else {
-		proxyServer.metrics.timeUnhealthy.With(proxyServer.hostnameLabel).Observe(proxyServer.resetTimer())
+		proxyServer.metrics.timeUnhealthy.With(proxyServer.nameLabel).Observe(proxyServer.resetTimer())
 	}
 
 	log.Println("Starting proxy server")
 	defer log.Println("Proxy server has shut down")
 	err := proxyServer.server.ListenAndServe()
-	proxyServer.metrics.timeHealthy.With(proxyServer.hostnameLabel).Observe(proxyServer.resetTimer())
+	proxyServer.metrics.timeHealthy.With(proxyServer.nameLabel).Observe(proxyServer.resetTimer())
 
 	if err != http.ErrServerClosed {
 		proxyServer.stop()
@@ -128,8 +128,8 @@ type proxyHandler struct {
 	curConn  uint32
 	client   http.Client
 	metrics  *ProxyHandlerMetrics
-	hostname string
 	proxies  []*httputil.ReverseProxy
+	name     string
 }
 
 func (ph *proxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -153,7 +153,7 @@ func (ph *proxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	//proxy := httputil.NewSingleHostReverseProxy(ph.backends[id].URL)
 	serveTimeNS := time.Since(tStart).Nanoseconds()
 	ph.proxies[id].ServeHTTP(w, r)
-	ph.metrics.handleTimeNS.With(prometheus.Labels{"hostname": ph.hostname}).Observe(float64(serveTimeNS))
+	ph.metrics.handleTimeNS.With(prometheus.Labels{"name": ph.name}).Observe(float64(serveTimeNS))
 }
 
 type proxyTransport struct {
@@ -162,8 +162,8 @@ type proxyTransport struct {
 }
 
 func (pt *proxyTransport) RoundTrip(request *http.Request) (*http.Response, error) {
-	pt.ph.metrics.httpRequests.With(prometheus.Labels{"hostname": pt.ph.hostname}).Inc()
-	pt.ph.metrics.numActiveConnections.With(prometheus.Labels{"hostname": pt.ph.hostname, "port": strconv.Itoa(pt.ph.backends[pt.id].Port)}).Inc()
+	pt.ph.metrics.httpRequests.With(prometheus.Labels{"name": pt.ph.name}).Inc()
+	pt.ph.metrics.numActiveConnections.With(prometheus.Labels{"backend": pt.ph.backends[pt.id].Name}).Inc()
 	response, err := http.DefaultTransport.RoundTrip(request)
 
 	defer func() {
@@ -175,7 +175,7 @@ func (pt *proxyTransport) RoundTrip(request *http.Request) (*http.Response, erro
 		return nil, err
 	}
 
-	pt.ph.metrics.numActiveConnections.With(prometheus.Labels{"hostname": pt.ph.hostname, "port": strconv.Itoa(pt.ph.backends[pt.id].Port)}).Dec()
-	pt.ph.metrics.httpResponses.With(prometheus.Labels{"hostname": pt.ph.hostname, "code": fmt.Sprintf("%vxx", response.StatusCode/100)}).Inc()
+	pt.ph.metrics.numActiveConnections.With(prometheus.Labels{"backend": pt.ph.backends[pt.id].Name}).Dec()
+	pt.ph.metrics.httpResponses.With(prometheus.Labels{"name": pt.ph.name, "code": fmt.Sprintf("%vxx", response.StatusCode/100)}).Inc()
 	return response, err
 }
