@@ -39,7 +39,7 @@ func NewProxyServer(config *Config) *ProxyServer {
 		bind:                config.Proxy.Bind,
 		shutdownInProgress:  0,
 		metrics:             NewProxyServerMetrics(),
-		nameLabel:           prometheus.Labels{"name": config.Proxy.Name},
+		nameLabel:           prometheus.Labels{"server": config.Proxy.Name},
 		firstStart:          true,
 		lastStateChangeTime: time.Now(),
 	}
@@ -153,7 +153,7 @@ func (ph *proxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	//proxy := httputil.NewSingleHostReverseProxy(ph.backends[id].URL)
 	serveTimeNS := time.Since(tStart).Nanoseconds()
 	ph.proxies[id].ServeHTTP(w, r)
-	ph.metrics.handleTimeNS.With(prometheus.Labels{"name": ph.name}).Observe(float64(serveTimeNS))
+	ph.metrics.handleTimeNS.With(prometheus.Labels{"server": ph.name}).Observe(float64(serveTimeNS))
 }
 
 type proxyTransport struct {
@@ -162,7 +162,7 @@ type proxyTransport struct {
 }
 
 func (pt *proxyTransport) RoundTrip(request *http.Request) (*http.Response, error) {
-	pt.ph.metrics.httpRequests.With(prometheus.Labels{"name": pt.ph.name}).Inc()
+	pt.ph.metrics.httpRequests.With(prometheus.Labels{"server": pt.ph.name}).Inc()
 	pt.ph.metrics.numActiveConnections.With(prometheus.Labels{"backend": pt.ph.backends[pt.id].Name}).Inc()
 	response, err := http.DefaultTransport.RoundTrip(request)
 
@@ -176,6 +176,6 @@ func (pt *proxyTransport) RoundTrip(request *http.Request) (*http.Response, erro
 	}
 
 	pt.ph.metrics.numActiveConnections.With(prometheus.Labels{"backend": pt.ph.backends[pt.id].Name}).Dec()
-	pt.ph.metrics.httpResponses.With(prometheus.Labels{"name": pt.ph.name, "code": fmt.Sprintf("%vxx", response.StatusCode/100)}).Inc()
+	pt.ph.metrics.httpResponses.With(prometheus.Labels{"server": pt.ph.name, "code": fmt.Sprintf("%vxx", response.StatusCode/100)}).Inc()
 	return response, err
 }
