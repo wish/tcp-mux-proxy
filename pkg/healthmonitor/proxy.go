@@ -79,7 +79,7 @@ func (proxyServer *ProxyServer) stop() {
 func (proxyServer *ProxyServer) Start() error {
 	// at this point proxyHandler.curConn should be zero after shutdown
 	mux := http.NewServeMux()
-	mux.Handle("/status/", &statusHandler{})
+	mux.Handle("/status", &statusHandler{})
 	mux.Handle("/", &proxyServer.ph)
 
 	proxyServer.server = &http.Server{
