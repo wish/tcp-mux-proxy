@@ -33,13 +33,14 @@ type HealthMonitorMetrics struct {
 // NewHealthMonitorMetrics creates an instance of HealthMonitorMetrics
 func NewHealthMonitorMetrics() HealthMonitorMetrics {
 	return HealthMonitorMetrics{
-		status:            newGaugeMetric("status", "Current health status of this server (1 = UP, 0 = DOWN)", []string{"hostname"}),
-		numUnhealthyPorts: newGaugeMetric("unhealthy_ports", "Current number of unhealthy ports on this server", []string{"hostname"}),
+		status:            newGaugeMetric("tcp_mux_proxy_status", "Current health status of this server (1 = UP, 0 = DOWN)", []string{"backend"}),
+		numUnhealthyPorts: newGaugeMetric("tcp_mux_proxy_unhealthy_ports", "Current number of unhealthy ports on this server", []string{"backend"}),
 	}
 }
 
 // ProxyServerMetrics contains the proxy server metrics
 type ProxyServerMetrics struct {
+	//todo config has no reasonable backend name to use here
 	timeUnhealthy *prometheus.SummaryVec
 	timeHealthy   *prometheus.SummaryVec
 }
@@ -47,8 +48,8 @@ type ProxyServerMetrics struct {
 // NewProxyServerMetrics creates an instance of ProxyServerMetrics
 func NewProxyServerMetrics() *ProxyServerMetrics {
 	return &ProxyServerMetrics{
-		timeUnhealthy: newSummaryMetric("continuous_time_unhealthy_seconds", "Length of time for server to come back up", []string{"hostname"}),
-		timeHealthy:   newSummaryMetric("continuous_time_healthy_seconds", "Length of time between successive surver shutdowns", []string{"hostname"}),
+		timeUnhealthy: newSummaryMetric("tcp_mux_proxy_continuous_time_unhealthy_seconds", "Length of time for server to come back up", []string{"name"}),
+		timeHealthy:   newSummaryMetric("tcp_mux_proxy_continuous_time_healthy_seconds", "Length of time between successive surver shutdowns", []string{"name"}),
 	}
 }
 
@@ -63,10 +64,10 @@ type ProxyHandlerMetrics struct {
 // NewProxyHandlerMetrics creates an instance of ProxyHandlerMetrics
 func NewProxyHandlerMetrics() *ProxyHandlerMetrics {
 	return &ProxyHandlerMetrics{
-		httpResponses:        newCounterMetric("http_responses_total", "Total of HTTP responses.", []string{"hostname", "code"}),
-		httpRequests:         newCounterMetric("http_requests_total", "Total of HTTP requests.", []string{"hostname"}),
-		numActiveConnections: newGaugeMetric("port_active_connections", "Current number of active connections for a port", []string{"hostname", "port"}),
-		handleTimeNS:         newSummaryMetric("handling_time_ns", "Time in ns to verify num connections is below limit and choose a downstream", []string{"hostname"}),
+		httpResponses:        newCounterMetric("tcp_mux_proxy_http_responses_total", "Total of HTTP responses.", []string{"name", "code"}),
+		httpRequests:         newCounterMetric("tcp_mux_proxy_http_requests_total", "Total of HTTP requests.", []string{"name"}),
+		numActiveConnections: newGaugeMetric("tcp_mux_proxy_port_active_connections", "Current number of active connections for a downstream", []string{"backend"}),
+		handleTimeNS:         newSummaryMetric("tcp_mux_proxy_handling_time_ns", "Time in ns to verify num connections is below limit and choose a downstream", []string{"name"}),
 	}
 }
 

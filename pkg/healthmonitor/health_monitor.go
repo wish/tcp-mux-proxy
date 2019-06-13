@@ -19,11 +19,16 @@ type HealthMonitor struct {
 	proxy        *ProxyServer
 	backends     []BackendPort
 	metrics      HealthMonitorMetrics
-	labels       prometheus.Labels
+	labels       []prometheus.Labels
 }
 
 // NewHealthMonitor makes a HealthMonitor and returns it
 func NewHealthMonitor(config *Config, proxy *ProxyServer) *HealthMonitor {
+	labels := make([]prometheus.Labels, len(config.Backend))
+	for i := range labels {
+		labels[i] = prometheus.Labels{"backend": config.Backend[i].Name}
+	}
+
 	return &HealthMonitor{
 		numUnhealthy: 0,
 		threshold:    uint32(len(config.Backend) - config.Proxy.MinAlive), //should add an assert that this is greater than or equal to zero
@@ -31,7 +36,7 @@ func NewHealthMonitor(config *Config, proxy *ProxyServer) *HealthMonitor {
 		backends:     config.Backend,
 		client:       http.Client{Timeout: time.Second},
 		metrics:      NewHealthMonitorMetrics(),
-		labels:       proxy.hostnameLabel,
+		labels:       labels,
 	}
 }
 
@@ -66,18 +71,18 @@ func (hm *HealthMonitor) incUnhealthy(id uint16) {
 	if atomic.AddUint32(&hm.numUnhealthy, uint32(1)) == hm.threshold {
 		// want to execute this right away
 		hm.proxy.stop()
-		hm.metrics.status.With(hm.labels).Dec()
+		hm.metrics.status.With(hm.labels[id]).Dec()
 	}
 	hm.proxy.ph.lb.MarkUnhealthy(id)
-	hm.metrics.numUnhealthyPorts.With(hm.labels).Inc()
+	hm.metrics.numUnhealthyPorts.With(hm.labels[id]).Inc()
 }
 
 func (hm *HealthMonitor) decUnhealthy(id uint16) {
 	if atomic.AddUint32(&hm.numUnhealthy, ^uint32(0)) == hm.threshold-1 {
-		hm.metrics.status.With(hm.labels).Inc()
+		hm.metrics.status.With(hm.labels[id]).Inc()
 	}
 	hm.proxy.ph.lb.MarkHealthy(id)
-	hm.metrics.numUnhealthyPorts.With(hm.labels).Dec()
+	hm.metrics.numUnhealthyPorts.With(hm.labels[id]).Dec()
 }
 
 func (hm *HealthMonitor) checkHealth(id uint16) bool {

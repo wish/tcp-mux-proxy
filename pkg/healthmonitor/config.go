@@ -19,6 +19,7 @@ type Config struct {
 		MaxConn           int           `yaml:"max_conn"`
 		MinAlive          int           `yaml:"min_alive"`
 		RecoverySleepTime time.Duration `yaml:"recovery_sleep_time"`
+		Name              string        `yaml:"name"`
 	} `yaml:"proxy"`
 	Backend []BackendPort `yaml:"backend"`
 }
