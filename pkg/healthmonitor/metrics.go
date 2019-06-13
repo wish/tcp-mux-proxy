@@ -33,8 +33,8 @@ type HealthMonitorMetrics struct {
 // NewHealthMonitorMetrics creates an instance of HealthMonitorMetrics
 func NewHealthMonitorMetrics() HealthMonitorMetrics {
 	return HealthMonitorMetrics{
-		status:            newGaugeMetric("tcp_mux_proxy_status", "Current health status of this server (1 = UP, 0 = DOWN)", []string{"backend"}),
-		numUnhealthyPorts: newGaugeMetric("tcp_mux_proxy_unhealthy_ports", "Current number of unhealthy ports on this server", []string{"backend"}),
+		status:            newGaugeMetric("tcp_mux_proxy_status", "Current health status of this server (1 = UP, 0 = DOWN)", []string{"server"}),
+		numUnhealthyPorts: newGaugeMetric("tcp_mux_proxy_unhealthy_ports", "Current number of unhealthy ports on this server", []string{"server"}),
 	}
 }
 
@@ -48,8 +48,8 @@ type ProxyServerMetrics struct {
 // NewProxyServerMetrics creates an instance of ProxyServerMetrics
 func NewProxyServerMetrics() *ProxyServerMetrics {
 	return &ProxyServerMetrics{
-		timeUnhealthy: newSummaryMetric("tcp_mux_proxy_continuous_time_unhealthy_seconds", "Length of time for server to come back up", []string{"name"}),
-		timeHealthy:   newSummaryMetric("tcp_mux_proxy_continuous_time_healthy_seconds", "Length of time between successive surver shutdowns", []string{"name"}),
+		timeUnhealthy: newSummaryMetric("tcp_mux_proxy_continuous_time_unhealthy_seconds", "Length of time for server to come back up", []string{"server"}),
+		timeHealthy:   newSummaryMetric("tcp_mux_proxy_continuous_time_healthy_seconds", "Length of time between successive surver shutdowns", []string{"server"}),
 	}
 }
 
@@ -64,10 +64,10 @@ type ProxyHandlerMetrics struct {
 // NewProxyHandlerMetrics creates an instance of ProxyHandlerMetrics
 func NewProxyHandlerMetrics() *ProxyHandlerMetrics {
 	return &ProxyHandlerMetrics{
-		httpResponses:        newCounterMetric("tcp_mux_proxy_http_responses_total", "Total of HTTP responses.", []string{"name", "code"}),
-		httpRequests:         newCounterMetric("tcp_mux_proxy_http_requests_total", "Total of HTTP requests.", []string{"name"}),
+		httpResponses:        newCounterMetric("tcp_mux_proxy_http_responses_total", "Total of HTTP responses.", []string{"server", "code"}),
+		httpRequests:         newCounterMetric("tcp_mux_proxy_http_requests_total", "Total of HTTP requests.", []string{"server"}),
 		numActiveConnections: newGaugeMetric("tcp_mux_proxy_port_active_connections", "Current number of active connections for a downstream", []string{"backend"}),
-		handleTimeNS:         newSummaryMetric("tcp_mux_proxy_handling_time_ns", "Time in ns to verify num connections is below limit and choose a downstream", []string{"name"}),
+		handleTimeNS:         newSummaryMetric("tcp_mux_proxy_handling_time_ns", "Time in ns to verify num connections is below limit and choose a downstream", []string{"server"}),
 	}
 }
 
